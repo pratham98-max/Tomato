@@ -22,7 +22,8 @@ const allowedOrigins = [
   'http://localhost:5001',
   /\.vercel\.app$/,
   /\.onrender\.com$/,
-  'https://tomato-9v5v.onrender.com'
+  'https://tomato-9v5v.onrender.com',
+  'https://tomato-five-gold.vercel.app/'
 ];
 
 // Socket.io setup
