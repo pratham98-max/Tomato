@@ -49,7 +49,7 @@ const orderSchema = new mongoose.Schema({
     },
     coordinates: {
       type: [Number],
-      default: undefined
+      default: [77.5946, 12.9716]
     }
   },
   customerLocation: {

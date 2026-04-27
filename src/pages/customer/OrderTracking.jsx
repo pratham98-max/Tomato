@@ -46,13 +46,8 @@ const OrderTracking = () => {
     try {
       const { data } = await api.get(`/orders/${orderId}`);
       setOrder(data);
-      // Use deliveryLocation if the driver has sent GPS updates
-      if (data.deliveryLocation?.coordinates?.length === 2) {
+      if (data.deliveryLocation?.coordinates) {
         setDriverLocation(data.deliveryLocation.coordinates);
-      } 
-      // Fallback: use the delivery driver's user profile location
-      else if (data.deliveryDriver?.location?.coordinates?.length === 2) {
-        setDriverLocation(data.deliveryDriver.location.coordinates);
       }
     } catch (err) { console.error(err); }
   };
@@ -93,10 +88,8 @@ const OrderTracking = () => {
               <h3>Live Tracking</h3>
               <LiveMap
                 driverLocation={driverLocation}
-                restaurantLocation={order.restaurantLocation?.coordinates || order.restaurant?.location?.coordinates}
+                restaurantLocation={order.restaurantLocation?.coordinates}
                 customerLocation={order.customerLocation?.coordinates}
-                restaurantName={order.restaurant?.name}
-                customerName={order.customer?.name}
                 height="350px"
               />
               {order.status === 'out_for_delivery' && order.deliveryDriver && (
