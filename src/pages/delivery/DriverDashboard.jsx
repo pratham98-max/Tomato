@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
@@ -15,13 +15,34 @@ const DriverDashboard = () => {
   const [activeDeliveries, setActiveDeliveries] = useState([]);
   const [completedOrders, setCompletedOrders] = useState([]);
   const [tab, setTab] = useState('available');
-  const [driverLocation, setDriverLocation] = useState([77.5946, 12.9716]);
+  const [driverLocation, setDriverLocation] = useState(null);
   const [trackingActive, setTrackingActive] = useState(false);
+  const watchIdRef = useRef(null);
 
+  // Get real GPS location immediately on mount
   useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setDriverLocation([pos.coords.longitude, pos.coords.latitude]);
+        },
+        (err) => {
+          console.warn('Geolocation error on mount:', err.message);
+          // Don't set a fallback — leave null so no marker is shown until real location is obtained
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    }
     fetchAvailable();
     fetchActive();
     fetchCompleted();
+
+    // Cleanup geolocation watch on unmount
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+    };
   }, []);
 
   const fetchAvailable = async () => {
@@ -65,34 +86,28 @@ const DriverDashboard = () => {
 
   const startTracking = useCallback((orderId) => {
     setTrackingActive(true);
+    // Clear any previous watch
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+    }
     if (navigator.geolocation) {
-      navigator.geolocation.watchPosition(
+      const id = navigator.geolocation.watchPosition(
         (pos) => {
           const coords = [pos.coords.longitude, pos.coords.latitude];
           setDriverLocation(coords);
           api.put(`/delivery/${orderId}/location`, { coordinates: coords }).catch(console.error);
           if (socket) socket.emit('driverLocationUpdate', { orderId, coordinates: coords });
         },
-        () => simulateMovement(orderId),
-        { enableHighAccuracy: true, maximumAge: 5000 }
+        (err) => {
+          console.warn('GPS tracking error:', err.message);
+          // If geolocation fails, try to use the current driver location as-is
+          // (from the initial getCurrentPosition call)
+        },
+        { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
       );
-    } else {
-      simulateMovement(orderId);
+      watchIdRef.current = id;
     }
   }, [socket]);
-
-  const simulateMovement = (orderId) => {
-    let lng = 77.5946 + (Math.random() - 0.5) * 0.02;
-    let lat = 12.9716 + (Math.random() - 0.5) * 0.02;
-    setInterval(() => {
-      lng += (Math.random() - 0.3) * 0.002;
-      lat += (Math.random() - 0.3) * 0.002;
-      const coords = [lng, lat];
-      setDriverLocation(coords);
-      api.put(`/delivery/${orderId}/location`, { coordinates: coords }).catch(console.error);
-      if (socket) socket.emit('driverLocationUpdate', { orderId, coordinates: coords });
-    }, 3000);
-  };
 
   const earnings = completedOrders.reduce((s, o) => s + Math.round(o.totalAmount * 0.15), 0);
 

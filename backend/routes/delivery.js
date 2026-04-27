@@ -49,6 +49,16 @@ router.put('/:orderId/accept', protect, requireRole('delivery'), async (req, res
 
     order.deliveryDriver = req.user._id;
     order.status = 'out_for_delivery';
+    
+    // Set initial delivery location from driver's profile location
+    const driver = await User.findById(req.user._id);
+    if (driver?.location?.coordinates?.length === 2) {
+      order.deliveryLocation = {
+        type: 'Point',
+        coordinates: driver.location.coordinates
+      };
+    }
+    
     await order.save();
 
     const populated = await Order.findById(order._id)
