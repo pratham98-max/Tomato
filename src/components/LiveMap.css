@@ -1,0 +1,21 @@
+.live-map {
+  width: 100%;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--color-border);
+  z-index: 1;
+}
+
+/* Remove default leaflet div icon background */
+.custom-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Ensure leaflet controls appear above map tiles */
+.leaflet-control-zoom {
+  border-radius: 8px !important;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15) !important;
+}
